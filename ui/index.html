@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HackerAI Offline</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --bg2: #161b22;
+      --bg3: #21262d;
+      --border: #30363d;
+      --text: #e6edf3;
+      --text2: #8b949e;
+      --accent: #58a6ff;
+      --green: #3fb950;
+      --yellow: #d29922;
+      --red: #f85149;
+      --purple: #bc8cff;
+      --orange: #ffa657;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, monospace;
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Header */
+    header {
+      background: var(--bg2);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+    header h1 { font-size: 16px; font-weight: 600; color: var(--accent); }
+    header .badge {
+      font-size: 11px;
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      padding: 2px 8px;
+      border-radius: 20px;
+      color: var(--text2);
+    }
+    #status-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--text2);
+      flex-shrink: 0;
+    }
+    #status-dot.online { background: var(--green); }
+    #status-dot.thinking { background: var(--yellow); animation: pulse 1s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+    /* Main */
+    main {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* Chat */
+    #chat-col {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    #messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .msg {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      max-width: 900px;
+    }
+    .msg.user { align-self: flex-end; align-items: flex-end; }
+    .msg.assistant { align-self: flex-start; }
+
+    .msg-bubble {
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 14px;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .msg.user .msg-bubble {
+      background: var(--accent);
+      color: #0d1117;
+      border-radius: 8px 8px 2px 8px;
+    }
+    .msg.assistant .msg-bubble {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 8px 8px 8px 2px;
+    }
+
+    /* Tool calls */
+    .tool-block {
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 12px;
+      font-family: 'Fira Code', 'Consolas', monospace;
+      overflow: hidden;
+      max-width: 700px;
+    }
+    .tool-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 10px;
+      background: rgba(88,166,255,0.08);
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+    }
+    .tool-icon { font-size: 14px; }
+    .tool-name { color: var(--accent); font-weight: 600; }
+    .tool-status { margin-left: auto; color: var(--text2); }
+    .tool-body {
+      padding: 8px 10px;
+      color: var(--text2);
+      max-height: 200px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+    }
+
+    /* Status bar */
+    #status-bar {
+      background: var(--bg3);
+      border-top: 1px solid var(--border);
+      padding: 4px 16px;
+      font-size: 11px;
+      color: var(--text2);
+      min-height: 24px;
+    }
+
+    /* Input */
+    #input-area {
+      border-top: 1px solid var(--border);
+      padding: 12px 16px;
+      background: var(--bg2);
+      display: flex;
+      gap: 8px;
+      align-items: flex-end;
+      flex-shrink: 0;
+    }
+    #input-area textarea {
+      flex: 1;
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      padding: 10px 12px;
+      font-size: 14px;
+      font-family: inherit;
+      resize: none;
+      min-height: 44px;
+      max-height: 200px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    #input-area textarea:focus { border-color: var(--accent); }
+    #send-btn {
+      background: var(--accent);
+      color: #0d1117;
+      border: none;
+      border-radius: 6px;
+      padding: 10px 16px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s;
+      white-space: nowrap;
+    }
+    #send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* Sidebar */
+    #sidebar {
+      width: 240px;
+      border-left: 1px solid var(--border);
+      background: var(--bg2);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+    .sidebar-section {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border);
+    }
+    .sidebar-title {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text2);
+      margin-bottom: 8px;
+    }
+    .stat-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      padding: 2px 0;
+    }
+    .stat-val { color: var(--accent); font-weight: 600; }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    /* Mobile */
+    @media (max-width: 700px) {
+      #sidebar { display: none; }
+      header .badge { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div id="status-dot"></div>
+  <h1>🔐 HackerAI Offline</h1>
+  <span class="badge" id="model-badge">carregando...</span>
+  <span class="badge">Docker Sandbox</span>
+</header>
+
+<main>
+  <div id="chat-col">
+    <div id="messages">
+      <div class="msg assistant">
+        <div class="msg-bubble">
+          Olá! Sou o HackerAI Offline. Estou rodando com Qwen via LM Studio/Ollama
+          e executo comandos em sandboxes Docker isolados.<br><br>
+          Como posso ajudar com sua análise de segurança?
+        </div>
+      </div>
+    </div>
+
+    <div id="status-bar">Pronto</div>
+
+    <div id="input-area">
+      <textarea
+        id="user-input"
+        placeholder="Descreva a tarefa de segurança..."
+        rows="1"
+      ></textarea>
+      <button id="send-btn">Enviar ↵</button>
+    </div>
+  </div>
+
+  <div id="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-title">Sessão</div>
+      <div class="stat-row"><span>ID</span><span class="stat-val" id="s-session">—</span></div>
+      <div class="stat-row"><span>Steps</span><span class="stat-val" id="s-steps">0</span></div>
+      <div class="stat-row"><span>Tokens</span><span class="stat-val" id="s-tokens">0</span></div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-title">Ferramentas usadas</div>
+      <div id="tools-used" style="font-size:12px;color:var(--text2);">—</div>
+    </div>
+    <div class="sidebar-section" style="flex:1;overflow-y:auto;">
+      <div class="sidebar-title">Sandbox</div>
+      <div id="sandbox-info" style="font-size:12px;color:var(--text2);">Nenhum ativo</div>
+    </div>
+  </div>
+</main>
+
+<script>
+const API = '/api';
+let sessionId = null;
+let history = [];
+let toolsUsed = new Set();
+let totalSteps = 0;
+let totalTokens = 0;
+let currentController = null;
+
+const messagesEl = document.getElementById('messages');
+const inputEl = document.getElementById('user-input');
+const sendBtn = document.getElementById('send-btn');
+const statusBar = document.getElementById('status-bar');
+const statusDot = document.getElementById('status-dot');
+
+// Auto-resize textarea
+inputEl.addEventListener('input', () => {
+  inputEl.style.height = 'auto';
+  inputEl.style.height = Math.min(inputEl.scrollHeight, 200) + 'px';
+});
+
+inputEl.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
+});
+sendBtn.addEventListener('click', send);
+
+// Health check on load
+fetch(`${API}/health`).then(r => r.json()).then(d => {
+  statusDot.className = d.llm?.ok ? 'online' : '';
+  const badge = document.getElementById('model-badge');
+  if (d.llm?.models?.length) {
+    badge.textContent = d.llm.models[0];
+  } else {
+    badge.textContent = d.llm?.backend || 'offline';
+  }
+}).catch(() => { statusDot.className = ''; });
+
+async function send() {
+  const msg = inputEl.value.trim();
+  if (!msg || sendBtn.disabled) return;
+
+  addUserMsg(msg);
+  inputEl.value = '';
+  inputEl.style.height = 'auto';
+  sendBtn.disabled = true;
+  statusDot.className = 'thinking';
+
+  const assistantEl = addAssistantMsg('');
+  const bubbleEl = assistantEl.querySelector('.msg-bubble');
+
+  let textBuffer = '';
+
+  try {
+    currentController = new AbortController();
+    const resp = await fetch(`${API}/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: msg, session_id: sessionId, history }),
+      signal: currentController.signal,
+    });
+
+    sessionId = resp.headers.get('X-Session-ID') || sessionId;
+    document.getElementById('s-session').textContent = (sessionId || '').slice(0, 8);
+
+    const reader = resp.body.getReader();
+    const dec = new TextDecoder();
+    let buf = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+
+      const lines = buf.split('\n');
+      buf = lines.pop();
+
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        try {
+          const ev = JSON.parse(line.slice(6));
+          handleEvent(ev, bubbleEl);
+        } catch {}
+      }
+    }
+  } catch (e) {
+    if (e.name !== 'AbortError') {
+      bubbleEl.textContent = `Erro: ${e.message}`;
+    }
+  } finally {
+    sendBtn.disabled = false;
+    statusDot.className = 'online';
+    statusBar.textContent = 'Pronto';
+    currentController = null;
+
+    // Salvar no histórico
+    if (textBuffer) {
+      history.push({ role: 'user', content: msg });
+      history.push({ role: 'assistant', content: textBuffer });
+      if (history.length > 20) history = history.slice(-20);
+    }
+  }
+}
+
+function handleEvent(ev, bubbleEl) {
+  switch (ev.type) {
+    case 'text':
+      bubbleEl.textContent += ev.delta;
+      scrollToBottom();
+      break;
+
+    case 'tool_call':
+      addToolBlock(ev.name, ev.arguments || '', 'running');
+      toolsUsed.add(ev.name);
+      updateToolsUsed();
+      statusBar.textContent = `⚙️ Executando: ${ev.name}...`;
+      break;
+
+    case 'tool_result': {
+      const block = document.querySelector(`[data-tool-id="${ev.id}"]`);
+      if (block) {
+        block.querySelector('.tool-status').textContent = '✓';
+        block.querySelector('.tool-body').textContent =
+          typeof ev.result === 'string' ? ev.result.slice(0, 500) : JSON.stringify(ev.result).slice(0, 500);
+      }
+      break;
+    }
+
+    case 'status':
+      statusBar.textContent = ev.text || '';
+      if (ev.step) {
+        totalSteps = ev.step;
+        document.getElementById('s-steps').textContent = totalSteps;
+      }
+      break;
+
+    case 'error':
+      statusBar.textContent = `❌ ${ev.message}`;
+      break;
+
+    case 'done':
+      totalTokens += ev.total_tokens || 0;
+      document.getElementById('s-tokens').textContent = totalTokens.toLocaleString();
+      statusBar.textContent = `✓ Concluído em ${ev.elapsed_s}s · ${ev.steps} steps · ${ev.stop_reason}`;
+      updateSandbox();
+      break;
+  }
+}
+
+function addUserMsg(text) {
+  const el = document.createElement('div');
+  el.className = 'msg user';
+  el.innerHTML = `<div class="msg-bubble">${escHtml(text)}</div>`;
+  messagesEl.appendChild(el);
+  scrollToBottom();
+}
+
+function addAssistantMsg(text) {
+  const el = document.createElement('div');
+  el.className = 'msg assistant';
+  el.innerHTML = `<div class="msg-bubble">${escHtml(text)}</div>`;
+  messagesEl.appendChild(el);
+  scrollToBottom();
+  return el;
+}
+
+function addToolBlock(name, args, status) {
+  const icons = {
+    run_terminal_cmd: '💻',
+    create_file: '📝',
+    view_file: '👁️',
+    web_search: '🔍',
+    open_url: '🌐',
+    todo_write: '✅',
+    todo_read: '📋',
+    list_files: '📁',
+  };
+  const icon = icons[name] || '🔧';
+  const id = Math.random().toString(36).slice(2);
+
+  let argsPreview = '';
+  try { argsPreview = JSON.stringify(JSON.parse(args || '{}')).slice(0, 100); } catch { argsPreview = (args || '').slice(0, 100); }
+
+  const el = document.createElement('div');
+  el.className = 'msg assistant';
+  el.innerHTML = `
+    <div class="tool-block" data-tool-id="${id}">
+      <div class="tool-header" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'">
+        <span class="tool-icon">${icon}</span>
+        <span class="tool-name">${escHtml(name)}</span>
+        <span class="tool-args" style="color:var(--text2);font-size:11px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(argsPreview)}</span>
+        <span class="tool-status" style="color:var(--yellow)">⏳</span>
+      </div>
+      <div class="tool-body" style="display:none">Aguardando resultado...</div>
+    </div>`;
+  messagesEl.appendChild(el);
+
+  // Update ID on the block
+  el.querySelector('.tool-block').setAttribute('data-tool-id', id);
+
+  scrollToBottom();
+  return id;
+}
+
+function updateToolsUsed() {
+  const el = document.getElementById('tools-used');
+  el.innerHTML = [...toolsUsed].map(t => `<div style="padding:2px 0">${t}</div>`).join('') || '—';
+}
+
+async function updateSandbox() {
+  try {
+    const r = await fetch(`${API}/sandboxes`);
+    const d = await r.json();
+    const el = document.getElementById('sandbox-info');
+    if (d.sandboxes.length === 0) {
+      el.textContent = 'Nenhum ativo';
+    } else {
+      el.innerHTML = d.sandboxes.map(s =>
+        `<div style="padding:2px 0">${s.container.slice(-16)}<br><span style="color:var(--text2)">idle: ${s.idle_s}s</span></div>`
+      ).join('');
+    }
+  } catch {}
+}
+
+function scrollToBottom() {
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>

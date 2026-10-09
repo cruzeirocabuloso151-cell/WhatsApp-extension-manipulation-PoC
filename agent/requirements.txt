@@ -1,0 +1,41 @@
+# ─── HackerAI Offline — Python dependencies ──────────────────────────────
+fastapi==0.115.5
+uvicorn[standard]==0.32.1
+pydantic==2.10.3
+pydantic-settings==2.6.1
+
+# LLM clients
+openai==1.58.1          # compatível com LM Studio + Ollama APIs
+httpx==0.28.1
+
+# Streaming
+sse-starlette==2.1.3
+anyio==4.7.0
+
+# Docker SDK (criar/gerenciar sandboxes)
+docker==7.1.0
+
+# Redis (state, queue)
+redis[hiredis]==5.2.1
+rq==1.16.1              # task queue simples
+
+# Storage
+aiosqlite==0.20.0
+sqlalchemy[asyncio]==2.0.36
+
+# Security & utils
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+python-multipart==0.0.19
+cryptography==44.0.0
+
+# Web search + scraping
+httpx==0.28.1
+beautifulsoup4==4.12.3
+markdownify==0.14.1     # HTML → markdown (como Jina AI Reader)
+
+# Misc
+python-dotenv==1.0.1
+structlog==24.4.0
+tenacity==9.0.0         # retry logic
+tiktoken==0.8.0         # token counting
